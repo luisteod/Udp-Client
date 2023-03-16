@@ -85,7 +85,6 @@ static void udp_client_task(void *pvParameters)
         struct timeval timeout;
         timeout.tv_sec = 10;
         timeout.tv_usec = 0;
-        HOST_IP_ADDR
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
 
         ESP_LOGI(TAG, "Socket created, sending to %s:%d", HOST_IP_ADDR, PORT);
@@ -105,7 +104,7 @@ static void udp_client_task(void *pvParameters)
             // recebimento de informacao
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
-            //retorna a qntd de bytes recebida
+            // retorna a qntd de bytes recebida
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
 
             // Error occurred during receiving
@@ -119,7 +118,7 @@ static void udp_client_task(void *pvParameters)
             {
                 rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, host_ip);
-                //print da msg recebida
+                // print da msg recebida
                 ESP_LOGI(TAG, "%s", rx_buffer);
                 if (strncmp(rx_buffer, "OK: ", 4) == 0)
                 {
