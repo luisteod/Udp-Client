@@ -32,7 +32,7 @@
 #elif defined(CONFIG_EXAMPLE_IPV6)
 #define HOST_IP_ADDR CONFIG_EXAMPLE_IPV6_ADDR
 #else
-#define HOST_IP_ADDR ""
+#define HOST_IP_ADDR "172.16.2.197"
 #endif
 
 #define PORT CONFIG_EXAMPLE_PORT
