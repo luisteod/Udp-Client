@@ -38,13 +38,13 @@
 #define PORT CONFIG_EXAMPLE_PORT
 
 static const char *TAG = "example";
-// datagrama que serah enviado pelo esp
+// Datagram send by ESP32
 static const char *payload = "Message from ESP32";
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
 {
-    // Buffer onde os dados e enviados recebidos são armazenados;
+    // Buffer onde os dados e enviados recebidos são armazenados
     char rx_buffer[128];
     char host_ip[] = HOST_IP_ADDR;
     int addr_family = 0;
@@ -73,7 +73,7 @@ static void udp_client_task(void *pvParameters)
         ESP_ERROR_CHECK(get_addr_from_stdin(PORT, SOCK_DGRAM, &ip_protocol, &addr_family, &dest_addr));
 #endif
 
-        // cria o socket
+        // Creates socket
         int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
         if (sock < 0)
         {
@@ -91,21 +91,11 @@ static void udp_client_task(void *pvParameters)
 
         while (1)
         {
-            // envio de informacao
-            // retorna negativo caso tenha dado erro
-            int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-            if (err < 0)
-            {
-                ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                break;
-            }
-            ESP_LOGI(TAG, "Message sent");
 
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
-            // retorna a qntd de bytes recebida
+            // Retorna a qntd de bytes recebida
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
-
             // Error occurred during receiving
             if (len < 0)
             {
@@ -124,6 +114,20 @@ static void udp_client_task(void *pvParameters)
                     ESP_LOGI(TAG, "Received expected message, reconnecting");
                     break;
                 }
+            }
+            
+            // Caso a mensagem enviada pelo srvr seja "velocidade", mande "Menssage sent from ESP32" para o host
+            if (strcmp(rx_buffer, "velocidade") == 0)
+            {
+                // Envio de informacao
+                // Retorna negativo caso tenha dado erro
+                int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    break;
+                }
+                ESP_LOGI(TAG, "Message sent");
             }
 
             vTaskDelay(2000 / portTICK_PERIOD_MS);
