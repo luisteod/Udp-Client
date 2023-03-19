@@ -94,40 +94,26 @@ static void udp_client_task(void *pvParameters)
 
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
-            // Retorna a qntd de bytes recebida
+            struct sockaddr pc_ip_addr;
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
-            // Error occurred during receiving
-            if (len < 0)
-            {
-                ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
-                break;
-            }
             // Data received
-            else
+            if(len >= 0)
             {
                 rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                ESP_LOGI(TAG, "Received %d bytes from %s:", len, host_ip);
-                // print da msg recebida
-                ESP_LOGI(TAG, "%s", rx_buffer);
-                if (strncmp(rx_buffer, "OK: ", 4) == 0)
+                ESP_LOGI(TAG, "Received %d bytes from %s:", len, pc_ip_addr.sa_data);
+                ESP_LOGI(TAG, "Message received : %s", rx_buffer);
+                if (strcmp(rx_buffer,"velocidade") == 0)
                 {
                     ESP_LOGI(TAG, "Received expected message, reconnecting");
+                    int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                    if (err < 0)
+                    {
+                      ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                        break;
+                    }
+                    ESP_LOGI(TAG, "Message sent");
                     break;
                 }
-            }
-            
-            // Caso a mensagem enviada pelo srvr seja "velocidade", mande "Menssage sent from ESP32" para o host
-            if (strcmp(rx_buffer, "velocidade") == 0)
-            {
-                // Envio de informacao
-                // Retorna negativo caso tenha dado erro
-                int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                if (err < 0)
-                {
-                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                    break;
-                }
-                ESP_LOGI(TAG, "Message sent");
             }
 
             vTaskDelay(2000 / portTICK_PERIOD_MS);
