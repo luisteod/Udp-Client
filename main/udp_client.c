@@ -32,14 +32,14 @@
 #elif defined(CONFIG_EXAMPLE_IPV6)
 #define HOST_IP_ADDR CONFIG_EXAMPLE_IPV6_ADDR
 #else
-#define HOST_IP_ADDR "172.16.2.197"
+#define HOST_IP_ADDR ""
 #endif
 
 #define PORT CONFIG_EXAMPLE_PORT
 
 static const char *TAG = "example";
 // datagrama que serah enviado pelo esp
-static const char *payload = "Message from ESP32 ";
+static const char *payload = "Message from ESP32";
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
@@ -101,7 +101,6 @@ static void udp_client_task(void *pvParameters)
             }
             ESP_LOGI(TAG, "Message sent");
 
-            // recebimento de informacao
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
             // retorna a qntd de bytes recebida
