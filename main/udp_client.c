@@ -37,9 +37,9 @@
 
 #define PORT CONFIG_EXAMPLE_PORT
 
-static const char *TAG = "example";
+static const char *TAG = "LOG";
 // Datagram send by ESP32
-static const char *payload = "Message from ESP32";
+static const char *payload = "Changing velocity";
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
@@ -91,11 +91,18 @@ static void udp_client_task(void *pvParameters)
 
         while (1)
         {
+            //if(connect(sock , (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
+            
+            if(sendto(sock, "client connected", strlen("client connected"), 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr)) > 0)
+            {
+                ESP_LOGI(TAG, "connetado");
+            }
 
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
             struct sockaddr pc_ip_addr;
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+
             // Data received
             if(len >= 0)
             {
@@ -104,7 +111,7 @@ static void udp_client_task(void *pvParameters)
                 ESP_LOGI(TAG, "Message received : %s", rx_buffer);
                 if (strcmp(rx_buffer,"velocidade") == 0)
                 {
-                    ESP_LOGI(TAG, "Received expected message, reconnecting");
+                    ESP_LOGI(TAG, "Received expected message, changing velocity");
                     int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
                     if (err < 0)
                     {
@@ -126,6 +133,7 @@ static void udp_client_task(void *pvParameters)
             close(sock);
         }
     }
+    ESP_LOGI(TAG, "saindo da task");
     vTaskDelete(NULL);
 }
 
