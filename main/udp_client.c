@@ -6,6 +6,7 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+//https://esp32tutorials.com/install-esp32-esp-idf-windows-integrate-vs-code/
 #include <string.h>
 #include <sys/param.h>
 #include "freertos/FreeRTOS.h"
@@ -85,7 +86,6 @@ static void udp_client_task(void *pvParameters)
         struct timeval timeout;
         timeout.tv_sec = 10;
         timeout.tv_usec = 0;
-        HOST_IP_ADDR
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
 
         ESP_LOGI(TAG, "Socket created, sending to %s:%d", HOST_IP_ADDR, PORT);
