@@ -40,7 +40,7 @@
 
 static const char *TAG = "example";
 // datagrama que serah enviado pelo esp
-static const char *payload = "Message from ESP32 ";
+static const char *payload = "Message from ESP32";
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
@@ -102,10 +102,9 @@ static void udp_client_task(void *pvParameters)
             }
             ESP_LOGI(TAG, "Message sent");
 
-            // recebimento de informacao
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
-            //retorna a qntd de bytes recebida
+            // retorna a qntd de bytes recebida
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
 
             // Error occurred during receiving
@@ -119,7 +118,7 @@ static void udp_client_task(void *pvParameters)
             {
                 rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, host_ip);
-                //print da msg recebida
+                // print da msg recebida
                 ESP_LOGI(TAG, "%s", rx_buffer);
                 if (strncmp(rx_buffer, "OK: ", 4) == 0)
                 {
