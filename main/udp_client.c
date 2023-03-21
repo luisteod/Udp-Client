@@ -39,7 +39,7 @@
 
 static const char *TAG = "LOG";
 // Datagram send by ESP32
-static const char *payload = "Changing velocity";
+static const char *payload = "MESSAGE SEND FROM ESP32";
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
@@ -91,9 +91,9 @@ static void udp_client_task(void *pvParameters)
 
         while (1)
         {
-            //if(connect(sock , (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
-            
-            if(sendto(sock, "client connected", strlen("client connected"), 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr)) > 0)
+            // if(connect(sock , (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
+
+            if (sendto(sock, "client connected", strlen("client connected"), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
             {
                 ESP_LOGI(TAG, "connetado");
             }
@@ -104,50 +104,55 @@ static void udp_client_task(void *pvParameters)
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
 
             // Data received
-            if(len >= 0)
+            if (len >= 0)
             {
                 rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, pc_ip_addr.sa_data);
                 ESP_LOGI(TAG, "Message received : %s", rx_buffer);
-                if (strcmp(rx_buffer,"velocidade") == 0)
+
+                int err = sendto(sock, rx_buffer, strlen(rx_buffer), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+
+                if (err < 0)
                 {
-                    ESP_LOGI(TAG, "Received expected message, changing velocity");
-                    int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                    if (err < 0)
-                    {
-                      ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                        break;
-                    }
-                    ESP_LOGI(TAG, "Message sent");
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
                     break;
                 }
+
+                int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    break;
+                }
+                ESP_LOGI(TAG, "Message sent");
+                break;
+
+                vTaskDelay(2000 / portTICK_PERIOD_MS);
             }
 
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
+            if (sock != -1)
+            {
+                ESP_LOGE(TAG, "Shutting down socket and restarting...");
+                shutdown(sock, 0);
+                close(sock);
+            }
         }
-
-        if (sock != -1)
-        {
-            ESP_LOGE(TAG, "Shutting down socket and restarting...");
-            shutdown(sock, 0);
-            close(sock);
-        }
+        ESP_LOGI(TAG, "saindo da task");
+        vTaskDelete(NULL);
     }
-    ESP_LOGI(TAG, "saindo da task");
-    vTaskDelete(NULL);
-}
 
-void app_main(void)
-{
-    ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    void app_main(void)
+    {
+        ESP_ERROR_CHECK(nvs_flash_init());
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
+        /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+         * Read "Establishing Wi-Fi or Ethernet Connection" section in
+         * examples/protocols/README.md for more information about this function.
+         */
+        ESP_ERROR_CHECK(example_connect());
 
-    xTaskCreate(udp_client_task, "udp_client", 4096, NULL, 5, NULL);
-}
+        xTaskCreate(udp_client_task, "udp_client", 4096, NULL, 5, NULL);
+    }
