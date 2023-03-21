@@ -39,7 +39,8 @@
 
 static const char *TAG = "LOG";
 // Datagram send by ESP32
-static const char *payload = "MESSAGE SEND FROM ESP32";
+static const char *payload = "Changing velocity";
+char* memory = NULL;
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
@@ -93,9 +94,10 @@ static void udp_client_task(void *pvParameters)
         {
             // if(connect(sock , (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
 
-            if (sendto(sock, "client connected", strlen("client connected"), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
+            char* msg = "Client Connected : Ler ou Escrever ?";
+            if (sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
             {
-                ESP_LOGI(TAG, "connetado");
+                ESP_LOGI(TAG, "Connetado");
             }
 
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
@@ -106,53 +108,83 @@ static void udp_client_task(void *pvParameters)
             // Data received
             if (len >= 0)
             {
-                rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                ESP_LOGI(TAG, "Received %d bytes from %s:", len, pc_ip_addr.sa_data);
-                ESP_LOGI(TAG, "Message received : %s", rx_buffer);
-
-                int err = sendto(sock, rx_buffer, strlen(rx_buffer), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-
-                if (err < 0)
+                if (strcmp(rx_buffer, "Escrever") == 0)
                 {
-                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
+                    ESP_LOGI(TAG, "Received %d bytes from %s:", len, pc_ip_addr.sa_data);
+                    ESP_LOGI(TAG, "Message received : %s", rx_buffer);
+                    
+                    char *msg = "Receive task, changing things in memory";
+                    int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                    if (err < 0)
+                    {
+                        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                        break;
+                    }
+                    
+                    int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+                    memory = rx_buffer;
+
+                    ESP_LOGI(TAG, "Message sent");
                     break;
                 }
 
-                int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-
-                if (err < 0)
+                else if(strcmp(rx_buffer, "Ler") == 0 && memory != NULL)
                 {
-                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    char* msg = "Receive task, reading things in memory";
+                    int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                    if (err < 0)
+                    {
+                        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                        break;
+                    }
+                    
+                    err = sendto(sock, memory, strlen(memory), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+
+                    ESP_LOGI(TAG, "Message sent");
                     break;
                 }
-                ESP_LOGI(TAG, "Message sent");
-                break;
 
-                vTaskDelay(2000 / portTICK_PERIOD_MS);
+                else
+                {
+                    char* msg = "Nao foi possivel executar o comando";
+                    int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                    if (err < 0)
+                    {
+                        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                        break;
+                    }
+                    ESP_LOGI(TAG, "Message sent");
+                    break;
+                }
             }
 
-            if (sock != -1)
-            {
-                ESP_LOGE(TAG, "Shutting down socket and restarting...");
-                shutdown(sock, 0);
-                close(sock);
-            }
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
+
+        if (sock != -1)
+        {
+            ESP_LOGE(TAG, "Shutting down socket and restarting...");
+            shutdown(sock, 0);
+            close(sock);
+        }
+
         ESP_LOGI(TAG, "saindo da task");
         vTaskDelete(NULL);
     }
+}
 
-    void app_main(void)
-    {
-        ESP_ERROR_CHECK(nvs_flash_init());
-        ESP_ERROR_CHECK(esp_netif_init());
-        ESP_ERROR_CHECK(esp_event_loop_create_default());
+void app_main(void)
+{
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-        /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-         * Read "Establishing Wi-Fi or Ethernet Connection" section in
-         * examples/protocols/README.md for more information about this function.
-         */
-        ESP_ERROR_CHECK(example_connect());
+    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+     * Read "Establishing Wi-Fi or Ethernet Connection" section in
+     * examples/protocols/README.md for more information about this function.
+     */
+    ESP_ERROR_CHECK(example_connect());
 
-        xTaskCreate(udp_client_task, "udp_client", 4096, NULL, 5, NULL);
-    }
+    xTaskCreate(udp_client_task, "udp_client", 4096, NULL, 5, NULL);
+}
