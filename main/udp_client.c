@@ -126,7 +126,6 @@ static void udp_client_task(void *pvParameters)
                     memory = rx_buffer;
 
                     ESP_LOGI(TAG, "Message sent");
-                    break;
                 }
 
                 else if(strcmp(rx_buffer, "Ler") == 0 && memory != NULL)
@@ -142,7 +141,6 @@ static void udp_client_task(void *pvParameters)
                     err = sendto(sock, memory, strlen(memory), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
                     ESP_LOGI(TAG, "Message sent");
-                    break;
                 }
 
                 else
@@ -155,7 +153,6 @@ static void udp_client_task(void *pvParameters)
                         break;
                     }
                     ESP_LOGI(TAG, "Message sent");
-                    break;
                 }
             }
 
