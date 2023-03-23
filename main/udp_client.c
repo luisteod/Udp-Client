@@ -38,9 +38,11 @@
 #define PORT CONFIG_EXAMPLE_PORT
 
 static const char *TAG = "LOG";
+char *TESTE = "TESTE";
 // Datagram send by ESP32
 static const char *payload = "Changing velocity";
-char* memory = NULL;
+char *memory = NULL;
+int len = -1;
 
 // Task que cria e roda o protocolo UDP para transmissão de dados
 static void udp_client_task(void *pvParameters)
@@ -92,71 +94,67 @@ static void udp_client_task(void *pvParameters)
 
         while (1)
         {
-            // if(connect(sock , (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
-
-            char* msg = "Client Connected : Ler ou Escrever ?";
-            if (sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) > 0)
-            {
-                ESP_LOGI(TAG, "Connetado");
-            }
-
             struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
             socklen_t socklen = sizeof(source_addr);
             struct sockaddr pc_ip_addr;
-            int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
-            
-            char* AUX;
-            ESP_LOGI(AUX, "Recebido comando do servidor : %s", rx_buffer);
 
-            // Data received
-            if (len >= 0)
+            // Efetua a conexão de fato
+            do
             {
-                if (strcmp(rx_buffer, "Escrever") == 0)
-                {
-                    rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                    ESP_LOGI(TAG, "Received %d bytes from %s:", len, pc_ip_addr.sa_data);
-                    ESP_LOGI(TAG, "Message received : %s", rx_buffer);
-                    
-                    char *msg = "Receive task, changing things in memory";
-                    int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                    if (err < 0)
-                    {
-                        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                        break;
-                    }
-                    
-                    int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
-                    memory = rx_buffer;
+                char *msg = "Connection";
+                sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+            } while(len <= 0); len = -1; 
 
-                    ESP_LOGI(TAG, "Message sent");
+            ESP_LOGI(TAG, "Conectado!");
+            memset(rx_buffer,0,sizeof(rx_buffer));
+
+            // Trava no loop esperando a resposta
+            do
+                len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+            while(len <= 0 && strlen(rx_buffer) <= 5);
+
+            ESP_LOGI(TESTE, "Recebido comando do servidor : %s , tamanho da mensagem : %d", rx_buffer, strlen(rx_buffer));
+
+            if (rx_buffer[0] == 'A')
+            {   
+                rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
+                //ESP_LOGI(TAG, "Message received : %s", rx_buffer);
+
+                char *msg = "Receive task, changing things in memory...";
+                int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    break;
+                }
+                memory = rx_buffer;
+                ESP_LOGI(TAG, "Memory changed");
+            } 
+            else if (rx_buffer[0] == 'B' && memory != NULL)
+            {
+                char *msg = "Receive task, reading things in memory....";
+                int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    break;
                 }
 
-                else if(strcmp(rx_buffer, "Ler") == 0 && memory != NULL)
-                {
-                    char* msg = "Receive task, reading things in memory";
-                    int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                    if (err < 0)
-                    {
-                        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                        break;
-                    }
-                    
-                    err = sendto(sock, memory, strlen(memory), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                err = sendto(sock, memory, strlen(memory), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
-                    ESP_LOGI(TAG, "Message sent");
-                }
-
-                else
+                ESP_LOGI(TAG, "Memory sent");
+            }
+            else
+            {
+                char *msg = "Nao foi possivel executar o comando";
+                int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                if (err < 0)
                 {
-                    char* msg = "Nao foi possivel executar o comando";
-                    int err = sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                    if (err < 0)
-                    {
-                        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                        break;
-                    }
-                    ESP_LOGI(TAG, "Message sent");
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                    break;
                 }
+                ESP_LOGI(TAG, "Message sent");
             }
 
             vTaskDelay(2000 / portTICK_PERIOD_MS);
