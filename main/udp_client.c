@@ -104,6 +104,9 @@ static void udp_client_task(void *pvParameters)
             socklen_t socklen = sizeof(source_addr);
             struct sockaddr pc_ip_addr;
             int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+            
+            char* AUX;
+            ESP_LOGI(AUX, "Recebido comando do servidor : %s", rx_buffer);
 
             // Data received
             if (len >= 0)
